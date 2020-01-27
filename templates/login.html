@@ -1,0 +1,49 @@
+<head>
+  <meta name="google-signin-client_id" content="660832907745-97560tbqo9knj00pd16n64e4lvnk3rm8.apps.googleusercontent.com">
+</head>
+<body>
+    <div class="login" style="position: fixed;right: 0;top: 0;">
+    <div class="g-signin2" data-onsuccess="onSignIn"></div>
+
+      <div>
+      <a href="#" class="signout" onclick="signOut();">Sign out</a>
+    </div>
+</div>
+      <script>
+            var signInBtn = document.getElementsByClassName('g-signin2')[0]
+            var signOutBtn = document.getElementsByClassName('signout')[0]
+            signOutBtn.style.display='none'
+        function onSignIn(googleUser) {
+            var id_token = googleUser.getAuthResponse().id_token;
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://localhost:2005/signin');
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+              console.log('Signed in as: ' + xhr.responseText);
+            };
+            xhr.send('idtoken=' + id_token);
+            console.log('token : '+id_token)
+            signInBtn.style.display='none'
+            signOutBtn.style.display = 'block'
+        }
+
+
+        function signOut() {
+          var auth2 = gapi.auth2.getAuthInstance();
+          auth2.signOut().then(function () {
+            signInBtn.style.display='block'
+            signOutBtn.style.display = 'none'
+          });
+          var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'http://localhost:2005/signout');
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+              console.log(xhr.responseText);
+            };
+            xhr.send();
+
+        }
+      </script>
+      
+  <script src="https://apis.google.com/js/platform.js?onload=renderButton" async defer></script>
+</body>

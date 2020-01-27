@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
+
+    </head>
+    <body>
+        <h1>Are You Sure You want to delete {{restaurant[0]}} and All Items in it?<br>
+        This Action can not be undone</h1>
+        <form action={{url_for('delRestaurant',restaurant_id=restaurant[1])}} method="POST">
+            <input type="submit" value="Delete All">
+            <a href={{url_for('restaurants')}}>Cancel [X]</a>
+        </form>
+    </body>
+</html>

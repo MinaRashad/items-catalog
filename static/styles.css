@@ -1,0 +1,36 @@
+h1,h2,h3,h4,h5,h6{
+    color: white;
+    font-size: 5vw;
+    text-decoration: unset;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    background-color: rgb(47, 47, 47);
+}
+a{
+    color: unset;
+    text-decoration: unset;
+
+}
+.restaurant{
+    text-align: center;
+    background-color: darkgray;
+    margin: 2vh;
+    padding: 1vh;
+    width: 50vw;
+    height: 50wh;
+    position: relative;
+    right:-50%;
+    transform: translate(-50%,0);
+    border: black 5px;
+    border-style: solid;
+    border-radius: 50px;
+}
+body{
+    background-color: rgb(122, 122, 122);
+}
+li{
+    list-style: none;
+    font-size: 1.5vw;
+    margin: 5px;
+    font-weight: bolder;
+    
+}

@@ -1,0 +1,48 @@
+<html>
+<head>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='menu.css') }}">
+
+</head>
+<body>
+<center>
+<h1>{{restaurant[0]}}</h1>
+</center>
+<ul>
+    {%with msgs = get_flashed_messages()%}
+{%if msgs%}
+{%for msg in msgs%}
+<li><b>{{msg}}</b></li>
+{%endfor%}
+{%endif%}
+{%endwith%}
+</ul>
+
+
+<div id="container">
+
+
+{% for i in items %}
+
+<div class="item">
+
+<p>Item:{{i[0]}}</p>
+<div class="itemdata">
+<p>{{i[3]}}</p>
+
+<p>Price: {{i[4]}} </p>
+</div>
+<div class="btns">
+    <a href={{url_for('editMenuItem', restaurant_id=restaurant[1], item_id= i[1] )}}>edit</a>
+    <a href={{url_for('deleteMenuItem', restaurant_id=restaurant[1], item_id=i[1])}}>delete</a>
+</div>
+</div>
+{% endfor %}
+</div>
+<center>
+<a href={{url_for('newMenuItem', restaurant_id=restaurant[1])}}>Create a new Item</a>
+</center>
+{%extends "login.html"%}
+
+</body>
+
+</html>
