@@ -17,10 +17,14 @@ install python3 with
     3.json
     4.flask
 
-you will find a file called _requirements.txt_
+
 run this command in the terminal while being the the same directory
 
-        pip3 install -r requirements.txt --user
+        pip3 install -r requirements.txt
+
+or in case it did not work try:
+
+	pip3 install -r requirements.txt --user
 
 ### Running the server
 
