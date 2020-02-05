@@ -14,17 +14,20 @@ def getTokenInfo(Token):
     res = requests.get(
         'https://oauth2.googleapis.com/tokeninfo?id_token=' +
         Token)
-    return res.json() 
+    return res.json()
 
 # Here we know if the restaurant is owened by some user
-def isOwnedBy(restaurant,token_id):
+
+
+def isOwnedBy(restaurant, token_id):
     owner = getTokenInfo(restaurant[2])
     claimer = getTokenInfo(token_id)
     if 'email' in owner.keys() and 'email' in claimer.keys():
-        if owner['email'] ==claimer['email']:
+        if owner['email'] == claimer['email']:
             return True
-    
+
     return False
+
 
 """
 Restaurants table by row number:
@@ -42,8 +45,9 @@ items table by row number:
 'MAIN PAGE'
 'READ'
 
-#The main page
-#an overview for all restaurants
+# The main page
+# an overview for all restaurants
+
 
 @app.route('/')
 @app.route('/restaurants')
@@ -58,7 +62,8 @@ def restaurants():
     return render_template('overview.html',
                            restaurants=renstaurants,
                            items=items)
-## CRUD system
+# CRUD system
+
 
 'Create'
 
@@ -68,8 +73,8 @@ def newRestaurant():
     # we need first to check if
     # user is logged in
     if 'idtoken' in request.cookies.keys() and \
-        request.cookies['idtoken'] != 'none':
-        
+            request.cookies['idtoken'] != 'none':
+
         if request.method == 'GET':
             return render_template('newRestaurant.html')
         elif request.method == 'POST':
@@ -79,7 +84,7 @@ def newRestaurant():
             # Assign the token to the restaurant
             # for later Authentication
             c.execute('INSERT INTO restaurant(name,user_token) \
-                VALUES (?,?);', [newRest,request.cookies['idtoken']])
+                VALUES (?,?);', [newRest, request.cookies['idtoken']])
             conn.commit()
             return redirect(
                 url_for('getRestaurant', restaurant_id=c.lastrowid)
@@ -100,7 +105,7 @@ def editRestaurant(restaurant_id):
         c.execute('SELECT * from restaurant\
                     where id=?', [restaurant_id])
         restaurant = c.fetchone()
-        if isOwnedBy(restaurant,request.cookies['idtoken']):
+        if isOwnedBy(restaurant, request.cookies['idtoken']):
             # if it is a GET, we need to show an HTML
             if request.method == 'GET':
                 return render_template(
@@ -133,10 +138,11 @@ def delRestaurant(restaurant_id):
         c.execute('SELECT * from restaurant\
                 where id=?', [restaurant_id])
         restaurant = c.fetchone()
-        if isOwnedBy(restaurant,request.cookies['idtoken']):
+        if isOwnedBy(restaurant, request.cookies['idtoken']):
             if request.method == 'GET':
-                
-                return render_template('delRestaurant.html', restaurant=restaurant)
+
+                return render_template('delRestaurant.html',
+                                       restaurant=restaurant)
             elif request.method == 'POST':
                 c.execute('DELETE from restaurant\
                     where id=?', [restaurant_id])
@@ -155,6 +161,7 @@ def delRestaurant(restaurant_id):
 'RESTAURANT PAGE'
 # this will show the restaurant
 # and all its items
+
 
 @app.route('/restaurant/<int:restaurant_id>')
 @app.route('/<int:restaurant_id>')
@@ -186,13 +193,13 @@ def getRestaurant(restaurant_id):
 @app.route('/<int:restaurant_id>/new',  methods=['GET', 'POST'])
 def newMenuItem(restaurant_id):
     if 'idtoken' in request.cookies.keys() and \
-        request.cookies['idtoken'] != 'none':
+            request.cookies['idtoken'] != 'none':
         conn = sqlite3.connect('./restaurant.db')
         c = conn.cursor()
         c.execute('SELECT * from restaurant\
                     where id=?', [restaurant_id])
         restaurant = c.fetchone()
-        if isOwnedBy(restaurant,request.cookies['idtoken']):
+        if isOwnedBy(restaurant, request.cookies['idtoken']):
             if request.method == 'POST':
 
                 newItem = [
@@ -201,7 +208,7 @@ def newMenuItem(restaurant_id):
                     request.form['price'],
                     request.form['description']
                 ]
-                
+
                 c.execute('INSERT INTO menu_item\
                     (restaurant_id,name,price,description)\
                     VALUES (?,?,?,?);', newItem)
@@ -221,7 +228,7 @@ def newMenuItem(restaurant_id):
         else:
             flash('You can only edit data you created!')
             return redirect(url_for('restaurants'))
-            
+
     else:
         flash('You can not edit the Database. Please Sign in')
         return redirect(url_for('restaurants'))
@@ -229,7 +236,8 @@ def newMenuItem(restaurant_id):
 
 'EDITING AN ITEM PAGE'
 
-#Editing an item
+# Editing an item
+
 
 @app.route(
     '/restaurant/<int:restaurant_id>/<int:item_id>/edititem',
@@ -246,14 +254,15 @@ def editMenuItem(restaurant_id, item_id):
         c.execute('SELECT * from restaurant\
                     where id=?', [restaurant_id])
         restaurant = c.fetchone()
-        if isOwnedBy(restaurant,request.cookies['idtoken']):
-            
+        if isOwnedBy(restaurant, request.cookies['idtoken']):
+
             if request.method == 'GET':
                 c.execute('SELECT * FROM menu_item\
                     WHERE id=?', [item_id])
                 item = c.fetchone()
                 return render_template(
-                    'editItem.html', restaurant_id=restaurant_id, MenuItem=item)
+                    'editItem.html',
+                    restaurant_id=restaurant_id, MenuItem=item)
             elif request.method == 'POST':
                 item = [request.form['name'],
                         request.form['price'],
@@ -295,7 +304,7 @@ def deleteMenuItem(restaurant_id, item_id):
         c.execute('SELECT * from restaurant\
                     where id=?', [restaurant_id])
         restaurant = c.fetchone()
-        if isOwnedBy(restaurant,request.cookies['idtoken']):
+        if isOwnedBy(restaurant, request.cookies['idtoken']):
             if request.method == 'GET':
                 c.execute('select * from menu_item \
                     where id=?', [item_id])
@@ -429,8 +438,6 @@ def JSONmenu(restaurant_id):
             }
         )
     return jsonify(restaurant)
-
-
 
 
 @app.route('/<int:restaurant_id>/<int:item_id>/JSON')
