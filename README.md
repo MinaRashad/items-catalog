@@ -1,6 +1,8 @@
 # Item Catalog
 ## A web application for restaurants Items
 
+a web application that uses sqlite3 and python3 to 
+view items and categorize them according to the restaurant
 
 ### Initialization
 
@@ -24,7 +26,7 @@ run this command in the terminal while being the the same directory
 
 or in case it did not work try:
 
-	pip3 install -r requirements.txt --user
+	    pip3 install -r requirements.txt --user
 
 ### Initializing Database
 
@@ -53,5 +55,17 @@ On the main page you can see:
     buttons to change restaurants names
     buttons to delete restaurants
 
-You will not be able to change anything in the Database,
-Unless you sign in.
+## Available APIs
+
+1.to get all Database in JSON format enter the following URL:
+
+_http://localhost:2005/restaurants/JSON_
+
+2.to get data about a specific restaurant
+
+_http://localhost:2005/<restaurant-id>/JSON_
+
+3.to get data about a specific item
+
+_http://localhost:2005/<restaurant-id>/<item-id>/JSON_
+

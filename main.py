@@ -7,18 +7,30 @@ from flask import request, redirect, url_for, flash, jsonify
 app = Flask(__name__)
 
 
+# this Function will get the sign in token
+# info by using google API
+
 def getTokenInfo(Token):
     res = requests.get(
         'https://oauth2.googleapis.com/tokeninfo?id_token=' +
         Token)
-    return res.json()
+    return res.json() 
 
+# Here we know if the restaurant is owened by some user
+def isOwnedBy(restaurant,token_id):
+    owner = getTokenInfo(restaurant[2])
+    claimer = getTokenInfo(token_id)
+    if 'email' in owner.keys() and 'email' in claimer.keys():
+        if owner['email'] ==claimer['email']:
+            return True
+    
+    return False
 
-login_sucess = False
 """
 Restaurants table by row number:
-        0 > Name,
+        0 > Name
         1 > id
+        2 > user_token
 items table by row number:
         0 > name
         1 > id
@@ -30,12 +42,13 @@ items table by row number:
 'MAIN PAGE'
 'READ'
 
+#The main page
+#an overview for all restaurants
 
 @app.route('/')
 @app.route('/restaurants')
 def restaurants():
-    # getting all items and mapping them with
-    # the corresponding restaurants
+
     conn = sqlite3.connect('./restaurant.db')
     c = conn.cursor()
     c.execute('select * from restaurant ')
@@ -45,7 +58,7 @@ def restaurants():
     return render_template('overview.html',
                            restaurants=renstaurants,
                            items=items)
-
+## CRUD system
 
 'Create'
 
@@ -54,14 +67,19 @@ def restaurants():
 def newRestaurant():
     # we need first to check if
     # user is logged in
-    if login_sucess:
+    if 'idtoken' in request.cookies.keys() and \
+        request.cookies['idtoken'] != 'none':
+        
         if request.method == 'GET':
             return render_template('newRestaurant.html')
         elif request.method == 'POST':
             newRest = request.form['name']
             conn = sqlite3.connect('./restaurant.db')
             c = conn.cursor()
-            c.execute('INSERT INTO restaurant(name) VALUES (?);', [newRest])
+            # Assign the token to the restaurant
+            # for later Authentication
+            c.execute('INSERT INTO restaurant(name,user_token) \
+                VALUES (?,?);', [newRest,request.cookies['idtoken']])
             conn.commit()
             return redirect(
                 url_for('getRestaurant', restaurant_id=c.lastrowid)
@@ -76,24 +94,28 @@ def newRestaurant():
 
 @app.route('/<int:restaurant_id>/edit', methods=['GET', 'POST'])
 def editRestaurant(restaurant_id):
-    if login_sucess:
+    if 'idtoken' in request.cookies.keys():
         conn = sqlite3.connect('./restaurant.db')
         c = conn.cursor()
-        # if it is a GET, we need to show an HTML
-        if request.method == 'GET':
-            c.execute('SELECT * from restaurant\
-                where id=?', [restaurant_id])
-            restaurant = c.fetchone()
-            return render_template(
-                'editRestaurant.html', restaurant=restaurant
-            )
-        # or else we update the DB
-        elif request.method == 'POST':
-            restaurantName = request.form['name']
-            c.execute('UPDATE restaurant \
-                SET name = ?\
-                WHERE id = ?', [restaurantName, restaurant_id])
-            conn.commit()
+        c.execute('SELECT * from restaurant\
+                    where id=?', [restaurant_id])
+        restaurant = c.fetchone()
+        if isOwnedBy(restaurant,request.cookies['idtoken']):
+            # if it is a GET, we need to show an HTML
+            if request.method == 'GET':
+                return render_template(
+                    'editRestaurant.html', restaurant=restaurant
+                )
+            # or else we update the DB
+            elif request.method == 'POST':
+                restaurantName = request.form['name']
+                c.execute('UPDATE restaurant \
+                    SET name = ?\
+                    WHERE id = ?', [restaurantName, restaurant_id])
+                conn.commit()
+                return redirect(url_for('restaurants'))
+        else:
+            flash('You can only edit data you created!')
             return redirect(url_for('restaurants'))
     else:
         flash('You can not edit the Database. Please Sign in')
@@ -105,20 +127,25 @@ def editRestaurant(restaurant_id):
 
 @app.route('/<int:restaurant_id>/del', methods=['POST', 'GET'])
 def delRestaurant(restaurant_id):
-    if login_sucess:
+    if 'idtoken' in request.cookies.keys():
         conn = sqlite3.connect('./restaurant.db')
         c = conn.cursor()
-        if request.method == 'GET':
-            c.execute('SELECT * from restaurant\
+        c.execute('SELECT * from restaurant\
                 where id=?', [restaurant_id])
-            restaurant = c.fetchone()
-            return render_template('delRestaurant.html', restaurant=restaurant)
-        elif request.method == 'POST':
-            c.execute('DELETE from restaurant\
-                where id=?', [restaurant_id])
-            c.execute('DELETE from menu_item\
-                where restaurant_id=?', [restaurant_id])
-            conn.commit()
+        restaurant = c.fetchone()
+        if isOwnedBy(restaurant,request.cookies['idtoken']):
+            if request.method == 'GET':
+                
+                return render_template('delRestaurant.html', restaurant=restaurant)
+            elif request.method == 'POST':
+                c.execute('DELETE from restaurant\
+                    where id=?', [restaurant_id])
+                c.execute('DELETE from menu_item\
+                    where restaurant_id=?', [restaurant_id])
+                conn.commit()
+                return redirect(url_for('restaurants'))
+        else:
+            flash('You can only delete data you created!')
             return redirect(url_for('restaurants'))
     else:
         flash('You can not edit the Database. Please Sign in')
@@ -126,12 +153,13 @@ def delRestaurant(restaurant_id):
 
 
 'RESTAURANT PAGE'
-
+# this will show the restaurant
+# and all its items
 
 @app.route('/restaurant/<int:restaurant_id>')
 @app.route('/<int:restaurant_id>')
 def getRestaurant(restaurant_id):
-    if login_sucess:
+    if 'idtoken' in request.cookies.keys():
         conn = sqlite3.connect('./restaurant.db')
         c = conn.cursor()
         c.execute('select * from restaurant where id = ?', [restaurant_id])
@@ -157,33 +185,43 @@ def getRestaurant(restaurant_id):
 @app.route('/restaurant/<int:restaurant_id>/new', methods=['GET', 'POST'])
 @app.route('/<int:restaurant_id>/new',  methods=['GET', 'POST'])
 def newMenuItem(restaurant_id):
-    if login_sucess:
-        if request.method == 'POST':
+    if 'idtoken' in request.cookies.keys() and \
+        request.cookies['idtoken'] != 'none':
+        conn = sqlite3.connect('./restaurant.db')
+        c = conn.cursor()
+        c.execute('SELECT * from restaurant\
+                    where id=?', [restaurant_id])
+        restaurant = c.fetchone()
+        if isOwnedBy(restaurant,request.cookies['idtoken']):
+            if request.method == 'POST':
 
-            newItem = [
-                restaurant_id,
-                request.form['name'],
-                request.form['price'],
-                request.form['description']
-            ]
-            conn = sqlite3.connect('./restaurant.db')
-            c = conn.cursor()
-            c.execute('INSERT INTO menu_item\
-                (restaurant_id,name,price,description)\
-                VALUES (?,?,?,?);', newItem)
-            conn.commit()
+                newItem = [
+                    restaurant_id,
+                    request.form['name'],
+                    request.form['price'],
+                    request.form['description']
+                ]
+                
+                c.execute('INSERT INTO menu_item\
+                    (restaurant_id,name,price,description)\
+                    VALUES (?,?,?,?);', newItem)
+                conn.commit()
 
-            flash("item was created Successfully!")
+                flash("item was created Successfully!")
 
-            return redirect(
-                url_for(
-                    'getRestaurant', restaurant_id=restaurant_id
+                return redirect(
+                    url_for(
+                        'getRestaurant', restaurant_id=restaurant_id
+                    )
                 )
-            )
-        elif request.method == 'GET':
-            return render_template(
-                'newItem.html', restaurant_id=restaurant_id
-            )
+            elif request.method == 'GET':
+                return render_template(
+                    'newItem.html', restaurant_id=restaurant_id
+                )
+        else:
+            flash('You can only edit data you created!')
+            return redirect(url_for('restaurants'))
+            
     else:
         flash('You can not edit the Database. Please Sign in')
         return redirect(url_for('restaurants'))
@@ -191,6 +229,7 @@ def newMenuItem(restaurant_id):
 
 'EDITING AN ITEM PAGE'
 
+#Editing an item
 
 @app.route(
     '/restaurant/<int:restaurant_id>/<int:item_id>/edititem',
@@ -201,30 +240,38 @@ def newMenuItem(restaurant_id):
     methods=['POST', 'GET']
 )
 def editMenuItem(restaurant_id, item_id):
-    if login_sucess:
+    if 'idtoken' in request.cookies.keys():
         conn = sqlite3.connect('./restaurant.db')
         c = conn.cursor()
-        if request.method == 'GET':
-            c.execute('SELECT * FROM menu_item\
-                WHERE id=?', [item_id])
-            item = c.fetchone()
-            return render_template(
-                'editItem.html', restaurant_id=restaurant_id, MenuItem=item)
-        elif request.method == 'POST':
-            item = [request.form['name'],
-                    request.form['price'],
-                    request.form['description'],
-                    item_id]
+        c.execute('SELECT * from restaurant\
+                    where id=?', [restaurant_id])
+        restaurant = c.fetchone()
+        if isOwnedBy(restaurant,request.cookies['idtoken']):
+            
+            if request.method == 'GET':
+                c.execute('SELECT * FROM menu_item\
+                    WHERE id=?', [item_id])
+                item = c.fetchone()
+                return render_template(
+                    'editItem.html', restaurant_id=restaurant_id, MenuItem=item)
+            elif request.method == 'POST':
+                item = [request.form['name'],
+                        request.form['price'],
+                        request.form['description'],
+                        item_id]
 
-            c.execute('UPDATE menu_item \
-                SET name = ?, price=?,\
-                description =?   \
-                WHERE id = ?', item)
-            conn.commit()
-            flash("item was edited Successfully!")
+                c.execute('UPDATE menu_item \
+                    SET name = ?, price=?,\
+                    description =?   \
+                    WHERE id = ?', item)
+                conn.commit()
+                flash("item was edited Successfully!")
 
-            return redirect(
-                url_for('getRestaurant', restaurant_id=restaurant_id))
+                return redirect(
+                    url_for('getRestaurant', restaurant_id=restaurant_id))
+        else:
+            flash('You can only edit data you created!')
+            return redirect(url_for('restaurants'))
     else:
         flash('You can not edit the Database. Please Sign in')
         return redirect(url_for('restaurants'))
@@ -242,22 +289,29 @@ def editMenuItem(restaurant_id, item_id):
     methods=['POST', 'GET']
 )
 def deleteMenuItem(restaurant_id, item_id):
-    if login_sucess:
+    if 'idtoken' in request.cookies.keys():
         conn = sqlite3.connect('./restaurant.db')
         c = conn.cursor()
-        if request.method == 'GET':
-            c.execute('select * from menu_item \
-                where id=?', [item_id])
-            item = c.fetchone()
-            return render_template(
-                'delmenuitem.html', item=item, restaurant_id=restaurant_id)
-        elif request.method == 'POST':
-            c.execute('DELETE FROM menu_item \
-                where id =?', [item_id])
-            conn.commit()
-            flash("item was deleted Successfully!")
-            return redirect(
-                url_for('getRestaurant', restaurant_id=restaurant_id))
+        c.execute('SELECT * from restaurant\
+                    where id=?', [restaurant_id])
+        restaurant = c.fetchone()
+        if isOwnedBy(restaurant,request.cookies['idtoken']):
+            if request.method == 'GET':
+                c.execute('select * from menu_item \
+                    where id=?', [item_id])
+                item = c.fetchone()
+                return render_template(
+                    'delmenuitem.html', item=item, restaurant_id=restaurant_id)
+            elif request.method == 'POST':
+                c.execute('DELETE FROM menu_item \
+                    where id =?', [item_id])
+                conn.commit()
+                flash("item was deleted Successfully!")
+                return redirect(
+                    url_for('getRestaurant', restaurant_id=restaurant_id))
+        else:
+            flash('You can only delete data you created!')
+            return redirect(url_for('restaurants'))
     else:
         flash('You can not edit the Database. Please Sign in')
         return redirect(url_for('restaurants'))
@@ -271,7 +325,7 @@ def login():
     if request.method == 'GET':
         return redirect(url_for('restaurants'))
     elif request.method == 'POST':
-        idinfo = getTokenInfo(request.form['idtoken'])
+        idinfo = getTokenInfo(request.cookies['idtoken'])
         try:
             if 'error' in idinfo.keys():
                 raise ValueError('Invalid token')
@@ -287,14 +341,10 @@ def login():
                 raise ValueError('Wrong Client ID.')
             # ID token is valid.
             # Get the user's Google Account ID from the decoded token.
+
             else:
-                global login_sucess
-                login_sucess = True
                 return idinfo['name']
         except ValueError:
-            login_sucess = False
-            return 'NOT SUCESS'
-
             pass
 
 
@@ -303,8 +353,6 @@ def login():
 
 @app.route('/signout')
 def signout():
-    global login_sucess
-    login_sucess = False
     return "You are now not logged in"
 
 
@@ -357,9 +405,6 @@ def JSONoverview():
     return jsonify(restaurants)
 
 
-"Same as before but with one restaurant"
-
-
 @app.route('/<int:restaurant_id>/JSON')
 def JSONmenu(restaurant_id):
     conn = sqlite3.connect('./restaurant.db')
@@ -386,7 +431,6 @@ def JSONmenu(restaurant_id):
     return jsonify(restaurant)
 
 
-"now with on item"
 
 
 @app.route('/<int:restaurant_id>/<int:item_id>/JSON')
