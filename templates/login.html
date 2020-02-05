@@ -21,7 +21,9 @@
             xhr.onload = function() {
               console.log('Signed in as: ' + xhr.responseText);
             };
-            xhr.send('idtoken=' + id_token);
+            document.cookie = 'idtoken='+id_token
+            //xhr.send('idtoken=' + id_token);
+            xhr.send();
             console.log('token : '+id_token)
             signInBtn.style.display='none'
             signOutBtn.style.display = 'block'
@@ -35,6 +37,7 @@
             signOutBtn.style.display = 'none'
           });
           var xhr = new XMLHttpRequest();
+          document.cookie = 'idtoken=none'
             xhr.open('GET', 'http://localhost:2005/signout');
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             xhr.onload = function() {
