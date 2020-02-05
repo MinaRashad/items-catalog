@@ -63,9 +63,9 @@ _http://localhost:2005/restaurants/JSON_
 
 2.to get data about a specific restaurant
 
-_http://localhost:2005/<restaurant-id>/JSON_
+_http://localhost:2005/restaurant-id/JSON_
 
 3.to get data about a specific item
 
-_http://localhost:2005/<restaurant-id>/<item-id>/JSON_
+_http://localhost:2005/restaurant-id/item-id/JSON_
 
